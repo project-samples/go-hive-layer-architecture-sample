@@ -12,4 +12,5 @@ type UserService interface {
 	Create(ctx context.Context, user *User) (int64, error)
 	Update(ctx context.Context, user *User) (int64, error)
 	Delete(ctx context.Context, id string) (int64, error)
+	Search(ctx context.Context, filter *UserFilter) ([]User, int64, error)
 }

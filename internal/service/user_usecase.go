@@ -27,7 +27,9 @@ func (s *UserUsecase) Create(ctx context.Context, user *User) (int64, error) {
 func (s *UserUsecase) Update(ctx context.Context, user *User) (int64, error) {
 	return s.repository.Update(ctx, user)
 }
-
 func (s *UserUsecase) Delete(ctx context.Context, id string) (int64, error) {
 	return s.repository.Delete(ctx, id)
+}
+func (s *UserUsecase) Search(ctx context.Context, filter *UserFilter) ([]User, int64, error) {
+	return s.repository.Search(ctx, filter)
 }
