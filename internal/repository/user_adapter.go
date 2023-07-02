@@ -19,6 +19,7 @@ type UserAdapter struct {
 	Connection *Connection
 	ModelType   reflect.Type
 	FieldsIndex map[string]int
+	Schema      *q.Schema
 	templates   map[string]*template.Template
 }
 
@@ -28,76 +29,51 @@ func NewUserRepository(connection *Connection, templates map[string]*template.Te
 	if err != nil {
 		return nil, err
 	}
-	return &UserAdapter{Connection: connection, ModelType: userType, FieldsIndex: fieldsIndex, templates: templates}, nil
+	schema := q.CreateSchema(userType)
+	return &UserAdapter{Connection: connection, ModelType: userType, FieldsIndex: fieldsIndex, Schema: schema, templates: templates}, nil
 }
 
-func (m *UserAdapter) All(ctx context.Context) (*[]User, error) {
-	cursor := m.Connection.Cursor()
+func (m *UserAdapter) All(ctx context.Context) ([]User, error) {
 	query := "select id, username, email, phone, status, createdDate from users"
-	cursor.Exec(ctx, query)
-	if cursor.Err != nil {
-		return nil, cursor.Err
-	}
-	var result []User
-	var user User
-	for cursor.HasMore(ctx) {
-		cursor.FetchOne(ctx, &user.Id, &user.Username, &user.Email, &user.Phone, &user.Status, &user.CreatedDate)
-		if cursor.Err != nil {
-			return nil, cursor.Err
-		}
-
-		result = append(result, user)
-	}
-	return &result, nil
+	var users []User
+	cursor := m.Connection.Cursor()
+	err := q.Query(ctx, cursor, m.FieldsIndex, &users, query)
+	return users, err
 }
 
 func (m *UserAdapter) Load(ctx context.Context, id string) (*User, error) {
-	cursor := m.Connection.Cursor()
-	var user User
+	var users []User
 	query := fmt.Sprintf("select id, username, email, phone, status , createdDate from users where id = %v ORDER BY id ASC limit 1", id)
-
-	cursor.Exec(ctx, query)
-	if cursor.Err != nil {
-		return nil, cursor.Err
+	cursor := m.Connection.Cursor()
+	err := q.Query(ctx, cursor, m.FieldsIndex, &users, query)
+	if err != nil {
+		return nil, err
 	}
-	for cursor.HasMore(ctx) {
-		cursor.FetchOne(ctx, &user.Id, &user.Username, &user.Email, &user.Phone, &user.Status, &user.CreatedDate)
-		if cursor.Err != nil {
-			return nil, cursor.Err
-		}
-		return &user, nil
+	if len(users) > 0 {
+		return &users[0], nil
 	}
 	return nil, nil
 }
 
 func (m *UserAdapter) Create(ctx context.Context, user *User) (int64, error) {
+	query := q.BuildToInsert("users", user, m.Schema)
 	cursor := m.Connection.Cursor()
-	query := fmt.Sprintf("INSERT INTO users VALUES (%v, %v, %v, %v, %v, %v)", user.Id, user.Username, user.Email, user.Phone, user.Status, user.CreatedDate)
 	cursor.Exec(ctx, query)
-	if cursor.Err != nil {
-		return -1, cursor.Err
-	}
-	return 1, nil
+	return 1, cursor.Err
 }
 
 func (m *UserAdapter) Update(ctx context.Context, user *User) (int64, error) {
+	query := q.BuildToUpdate("users", user, m.Schema)
 	cursor := m.Connection.Cursor()
-	query := fmt.Sprintf("UPDATE users SET username = %v, email = %v, phone = %v WHERE id = %v", user.Username, user.Email, user.Phone, user.Id)
 	cursor.Exec(ctx, query)
-	if cursor.Err != nil {
-		return -1, cursor.Err
-	}
-	return 1, nil
+	return 1, cursor.Err
 }
 
 func (m *UserAdapter) Delete(ctx context.Context, id string) (int64, error) {
 	cursor := m.Connection.Cursor()
-	query := fmt.Sprintf("DELETE FROM users WHERE id = %v", id)
+	query := fmt.Sprintf("delete from users where id = %v", id)
 	cursor.Exec(ctx, query)
-	if cursor.Err != nil {
-		return -1, cursor.Err
-	}
-	return 1, nil
+	return 1, cursor.Err
 }
 
 func (m *UserAdapter) Search(ctx context.Context, filter *UserFilter) ([]User, int64, error) {
@@ -105,10 +81,7 @@ func (m *UserAdapter) Search(ctx context.Context, filter *UserFilter) ([]User, i
 	if filter.Limit <= 0 {
 		return rows, 0, nil
 	}
-
-	filter.Sort = q.BuildSort(filter.Sort, m.ModelType)
 	ftr := convert.ToMap(filter, &m.ModelType)
-
 	query := hv.Build(ftr, *m.templates["user"])
 	offset := search.GetOffset(filter.Limit, filter.Page)
 	if offset < 0 {
