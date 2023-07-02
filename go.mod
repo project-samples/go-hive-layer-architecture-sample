@@ -6,7 +6,7 @@ require (
 	github.com/beltran/gohive v1.6.0
 	github.com/core-go/config v0.1.0
 	github.com/core-go/core v0.3.5
-	github.com/core-go/hive v0.2.1
+	github.com/core-go/hive v0.2.3
 	github.com/core-go/log v0.1.4
 	github.com/core-go/search v0.2.10
 	github.com/gorilla/mux v1.8.0

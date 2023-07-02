@@ -7,7 +7,6 @@ import (
 
 	. "github.com/beltran/gohive"
 	q "github.com/core-go/hive"
-	"github.com/core-go/search"
 	"github.com/core-go/search/convert"
 	"github.com/core-go/search/template"
 	hv "github.com/core-go/search/template/hive"
@@ -25,11 +24,10 @@ type UserAdapter struct {
 
 func NewUserRepository(connection *Connection, templates map[string]*template.Template) (*UserAdapter, error) {
 	userType := reflect.TypeOf(User{})
-	fieldsIndex, err := q.GetColumnIndexes(userType)
+	fieldsIndex, schema, _, _, _, err := q.Init(userType)
 	if err != nil {
 		return nil, err
 	}
-	schema := q.CreateSchema(userType)
 	return &UserAdapter{Connection: connection, ModelType: userType, FieldsIndex: fieldsIndex, Schema: schema, templates: templates}, nil
 }
 
@@ -77,31 +75,21 @@ func (m *UserAdapter) Delete(ctx context.Context, id string) (int64, error) {
 }
 
 func (m *UserAdapter) Search(ctx context.Context, filter *UserFilter) ([]User, int64, error) {
-	var rows []User
+	var users []User
 	if filter.Limit <= 0 {
-		return rows, 0, nil
+		return users, 0, nil
 	}
 	ftr := convert.ToMap(filter, &m.ModelType)
 	query := hv.Build(ftr, *m.templates["user"])
-	offset := search.GetOffset(filter.Limit, filter.Page)
-	if offset < 0 {
-		offset = 0
-	}
+	offset := q.GetOffset(filter.Limit, filter.Page)
 	pagingQuery := q.BuildPagingQuery(query, filter.Limit, offset)
-	countQuery, _ := q.BuildCountQuery(query, nil)
+	countQuery := q.BuildCountQuery(query)
 
 	cursor := m.Connection.Cursor()
-	cursor.Exec(ctx, countQuery)
-	if cursor.Err != nil {
-		return rows, -1, cursor.Err
+	total, err := q.Count(ctx, cursor, countQuery)
+	if err != nil {
+		return users, total, err
 	}
-	var total int64
-	for cursor.HasMore(ctx) {
-		cursor.FetchOne(ctx, &total)
-		if cursor.Err != nil {
-			return rows, total, cursor.Err
-		}
-	}
-	err := q.Query(ctx, cursor, m.FieldsIndex, &rows, pagingQuery)
-	return rows, total, err
+	err = q.Query(ctx, cursor, m.FieldsIndex, &users, pagingQuery)
+	return users, total, err
 }
