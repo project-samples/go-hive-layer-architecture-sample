@@ -18,21 +18,22 @@ type UserAdapter struct {
 	Connection *Connection
 	ModelType   reflect.Type
 	FieldsIndex map[string]int
+	Fields      string
 	Schema      *q.Schema
 	templates   map[string]*template.Template
 }
 
 func NewUserRepository(connection *Connection, templates map[string]*template.Template) (*UserAdapter, error) {
 	userType := reflect.TypeOf(User{})
-	fieldsIndex, schema, _, _, _, err := q.Init(userType)
+	fieldsIndex, schema, _, _, _, fields, err := q.Init(userType)
 	if err != nil {
 		return nil, err
 	}
-	return &UserAdapter{Connection: connection, ModelType: userType, FieldsIndex: fieldsIndex, Schema: schema, templates: templates}, nil
+	return &UserAdapter{Connection: connection, ModelType: userType, FieldsIndex: fieldsIndex, Fields: fields, Schema: schema, templates: templates}, nil
 }
 
 func (m *UserAdapter) All(ctx context.Context) ([]User, error) {
-	query := "select id, username, email, phone, status, createdDate from users"
+	query := fmt.Sprintf("select %s from users", m.Fields)
 	var users []User
 	cursor := m.Connection.Cursor()
 	err := q.Query(ctx, cursor, m.FieldsIndex, &users, query)
@@ -41,7 +42,7 @@ func (m *UserAdapter) All(ctx context.Context) ([]User, error) {
 
 func (m *UserAdapter) Load(ctx context.Context, id string) (*User, error) {
 	var users []User
-	query := fmt.Sprintf("select id, username, email, phone, status , createdDate from users where id = %v ORDER BY id ASC limit 1", id)
+	query := fmt.Sprintf("select %s from users where id = %s ORDER BY id ASC limit 1", m.Fields, id)
 	cursor := m.Connection.Cursor()
 	err := q.Query(ctx, cursor, m.FieldsIndex, &users, query)
 	if err != nil {
@@ -79,7 +80,7 @@ func (m *UserAdapter) Search(ctx context.Context, filter *UserFilter) ([]User, i
 	if filter.Limit <= 0 {
 		return users, 0, nil
 	}
-	ftr := convert.ToMap(filter, &m.ModelType)
+	ftr := convert.ToMapWithFields(filter, m.Fields, &m.ModelType)
 	query := hv.Build(ftr, *m.templates["user"])
 	offset := q.GetOffset(filter.Limit, filter.Page)
 	pagingQuery := q.BuildPagingQuery(query, filter.Limit, offset)
