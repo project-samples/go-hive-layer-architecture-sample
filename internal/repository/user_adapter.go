@@ -42,7 +42,7 @@ func (m *UserAdapter) All(ctx context.Context) ([]User, error) {
 
 func (m *UserAdapter) Load(ctx context.Context, id string) (*User, error) {
 	var users []User
-	query := fmt.Sprintf("select %s from users where id = %s ORDER BY id ASC limit 1", m.Fields, id)
+	query := fmt.Sprintf("select %s from users where id = %s order by id asc limit 1", m.Fields, id)
 	cursor := m.Connection.Cursor()
 	err := q.Query(ctx, cursor, m.FieldsIndex, &users, query)
 	if err != nil {
