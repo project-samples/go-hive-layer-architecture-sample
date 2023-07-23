@@ -4,14 +4,14 @@ import (
 	"context"
 	"reflect"
 
-	. "github.com/beltran/gohive"
+	h "github.com/beltran/gohive"
 	v "github.com/core-go/core/v10"
 
 	"github.com/core-go/hive"
+	"github.com/core-go/hive/template"
+	"github.com/core-go/hive/template/xml"
 	"github.com/core-go/log"
 	query "github.com/core-go/search/hive"
-	"github.com/core-go/search/template"
-	"github.com/core-go/search/template/xml"
 
 	"go-service/internal/handler"
 	"go-service/internal/model"
@@ -24,9 +24,9 @@ type ApplicationContext struct {
 }
 
 func NewApp(ctx context.Context, conf Config) (*ApplicationContext, error) {
-	configuration := NewConnectConfiguration()
+	configuration := h.NewConnectConfiguration()
 	configuration.Database = "masterdata"
-	connection, errConn := Connect(conf.Hive.Host, conf.Hive.Port, conf.Hive.Auth, configuration)
+	connection, errConn := h.Connect(conf.Hive.Host, conf.Hive.Port, conf.Hive.Auth, configuration)
 	if errConn != nil {
 		return nil, errConn
 	}

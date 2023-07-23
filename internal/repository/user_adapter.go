@@ -7,9 +7,8 @@ import (
 
 	. "github.com/beltran/gohive"
 	q "github.com/core-go/hive"
+	"github.com/core-go/hive/template"
 	"github.com/core-go/search/convert"
-	"github.com/core-go/search/template"
-	hv "github.com/core-go/search/template/hive"
 
 	. "go-service/internal/model"
 )
@@ -81,7 +80,7 @@ func (m *UserAdapter) Search(ctx context.Context, filter *UserFilter) ([]User, i
 		return users, 0, nil
 	}
 	ftr := convert.ToMapWithFields(filter, m.Fields, &m.ModelType)
-	query := hv.Build(ftr, *m.templates["user"])
+	query := template.Build(ftr, *m.templates["user"])
 	offset := q.GetOffset(filter.Limit, filter.Page)
 	pagingQuery := q.BuildPagingQuery(query, filter.Limit, offset)
 	countQuery := q.BuildCountQuery(query)
