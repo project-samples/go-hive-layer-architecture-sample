@@ -1,14 +1,14 @@
 module go-service
 
-go 1.18
+go 1.17
 
 require (
 	github.com/beltran/gohive v1.6.0
-	github.com/core-go/config v0.1.0
-	github.com/core-go/core v0.3.5
-	github.com/core-go/hive v0.2.1
-	github.com/core-go/log v0.1.4
-	github.com/core-go/search v0.2.10
+	github.com/core-go/config v1.0.1
+	github.com/core-go/core v0.3.8
+	github.com/core-go/hive v0.2.7
+	github.com/core-go/log v1.0.0
+	github.com/core-go/search v1.0.1
 	github.com/gorilla/mux v1.8.0
 )
 
